@@ -452,3 +452,70 @@ for label, Sigma in [
     print(f"  Vol improvement: "
           f"{((w_eq@Sigma@w_eq)**0.5 - (w_gmv@Sigma@w_gmv)**0.5):.4%}")
 ```
+
+---
+
+## 15. Case 3 — Asset Selection from 10 Assets using PCA (select top 4)
+
+### Problem
+
+We have **10 assets** but want to build a portfolio from only **4**. How do we
+decide which 4 to keep?
+
+Naively picking the 4 lowest-variance assets ignores correlations. Instead we
+use PCA scores to select the 4 assets that are most representative of the
+dominant systematic risk factors — and then run GMV on just those 4.
+
+### Step-by-Step
+
+**Step 1 — Build the universe covariance matrix ($10 \times 10$)**
+
+We use a realistic structure: 3 groups (growth, value, defensive) with
+within-group correlation ~0.7 and cross-group correlation ~0.2.
+
+| Asset | Group | Daily Vol |
+|-------|-------|-----------|
+| A1–A4 | Growth | 3%–5% |
+| B1–B3 | Value | 1.5%–2.5% |
+| C1–C3 | Defensive | 0.8%–1.5% |
+
+**Step 2 — Eigendecompose $\Sigma$**
+
+$$\Sigma = Q \Lambda Q^\top, \quad \lambda_1 \geq \lambda_2 \geq \cdots \geq \lambda_{10}$$
+
+**Step 3 — Select $k$ factors** (e.g. 95% variance explained → typically 3–4 PCs)
+
+**Step 4 — Score every asset**
+
+$$\text{score}_i = \sum_{j=1}^{k} \lambda_j \, q_{ij}^2$$
+
+High score = asset is strongly exposed to the dominant risk factors.
+
+**Step 5 — Keep top 4 by score, drop the rest**
+
+**Step 6 — Extract the $4 \times 4$ sub-covariance and compute GMV weights**
+
+### Why this works
+
+The PCA score measures how much of an asset's variance is explained by the
+top-$k$ systematic factors. Selecting high-scoring assets ensures the portfolio
+captures the main market dynamics. Low-scoring assets are largely idiosyncratic
+— including them adds noise without adding meaningful factor exposure.
+
+### Key output to look for
+
+| Check | What it tells you |
+|-------|------------------|
+| Which group dominates the top 4? | Which sector drives most market risk |
+| How unequal are the 4 weights? | Whether selected assets are still similar or diverse |
+| Portfolio vol vs equal-weight (all 10) | Benefit of selection + optimisation |
+
+See `examples/basics.py` — Case 3 for the full runnable implementation.
+
+---
+
+## 16. Run All Three Cases
+
+```bash
+python examples/basics.py
+```
