@@ -244,12 +244,12 @@ Top asset by score: **Asset C**.
 
 **Step 7 — GMV weights over all 3 assets:**
 
-$$\mathbf{w}^* = \frac{\Sigma^{-1} \mathbf{1}}{\mathbf{1}^\top \Sigma^{-1} \mathbf{1}}
+$$\mathbf{w}^{\ast} = \frac{\Sigma^{-1} \mathbf{1}}{\mathbf{1}^\top \Sigma^{-1} \mathbf{1}}
   \approx [0.29,\ 0.38,\ 0.33]$$
 
 **Step 8 — Portfolio variance:**
 
-$$(\mathbf{w}^*)^\top \Sigma\, \mathbf{w}^* \approx 0.566$$
+$$(\mathbf{w}^{\ast})^\top \Sigma\, \mathbf{w}^{\ast} \approx 0.566$$
 
 ---
 
@@ -266,7 +266,7 @@ To see this precisely, consider the extreme: if $\Sigma = \sigma^2 \mathbf{I}$
 
 $$\Sigma^{-1} = \frac{1}{\sigma^2} \mathbf{I}
   \quad \Longrightarrow \quad
-  \mathbf{w}^* = \frac{\mathbf{1}}{N}$$
+  \mathbf{w}^{\ast} = \frac{\mathbf{1}}{N}$$
 
 Exactly equal weights. Our example is close to this degenerate case because
 all three assets are driven almost entirely by the **same single factor (PC1)**.

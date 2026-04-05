@@ -97,15 +97,15 @@ factor neutralisation.
 
 $$\Sigma = \begin{pmatrix} 0.10 & 0.04 & 0.03 \\ 0.04 & 0.08 & 0.02 \\ 0.03 & 0.02 & 0.05 \end{pmatrix},
 \qquad
-\mathbf{w}^* \approx \begin{pmatrix} 0.24 \\ 0.31 \\ 0.45 \end{pmatrix}$$
+\mathbf{w}^{\ast} \approx \begin{pmatrix} 0.24 \\ 0.31 \\ 0.45 \end{pmatrix}$$
 
 **Step 1 — Portfolio variance:**
 
-$$\text{Var}(r_p) = \mathbf{w}^{*\top} \Sigma \mathbf{w}^* \approx 0.046$$
+$$\text{Var}(r_p) = \mathbf{w}^{\ast\top} \Sigma \mathbf{w}^{\ast} \approx 0.046$$
 
-**Step 2 — $\Sigma \mathbf{w}^*$:**
+**Step 2 — $\Sigma \mathbf{w}^{\ast}$:**
 
-$$\Sigma \mathbf{w}^* \approx \begin{pmatrix} 0.040 \\ 0.036 \\ 0.033 \end{pmatrix}$$
+$$\Sigma \mathbf{w}^{\ast} \approx \begin{pmatrix} 0.040 \\ 0.036 \\ 0.033 \end{pmatrix}$$
 
 **Step 3 — Component risk contributions:**
 
@@ -119,7 +119,7 @@ $$\Sigma \mathbf{w}^* \approx \begin{pmatrix} 0.040 \\ 0.036 \\ 0.033 \end{pmatr
 **Step 4 — Eigen decomposition:**
 
 Assuming $\lambda_1 = 0.18,\ \lambda_2 = 0.05,\ \lambda_3 = 0.01$ and
-$\mathbf{z} = Q^\top \mathbf{w}^* \approx [0.48, 0.12, 0.05]$:
+$\mathbf{z} = Q^\top \mathbf{w}^{\ast} \approx [0.48, 0.12, 0.05]$:
 
 | Factor | $\lambda_j$ | $z_j$ | $\lambda_j z_j^2$ | % of Var |
 |--------|-------------|--------|-------------------|---------|
