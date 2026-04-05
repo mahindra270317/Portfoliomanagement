@@ -158,17 +158,59 @@ print()
 print_weights(w_B, names_B, Sigma_B)
 print_factor_risk(w_B, Sigma_B)
 
-print(f"""
-  Why skewed weights?
-  Two forces both push weight toward Asset A:
-    1. Lowest variance  (σ_A = 1% vs σ_C = 6% → 6× difference)
-    2. Lowest correlation with others (ρ_AC = 0.05)
+# ------------------------------------------------------------------
+# Full step-by-step breakdown of WHY these weights come out this way
+# ------------------------------------------------------------------
+print(f"\n  --- Step-by-step weight derivation ---")
 
-  The precision matrix entry (Σ⁻¹)_ii ≈ 1 / [σ_i² (1 - R_i²)]
-  is huge for Asset A (small σ², small R²) → A dominates the weights.
-  Asset C gets barely 1% despite being in the portfolio — its high vol
-  and moderate correlation make it a poor diversifier.
-""")
+inv_S_B = np.linalg.inv(Sigma_B)
+print(f"\n  Precision matrix Σ⁻¹:")
+labels = ["A(1%)", "B(3%)", "C(6%)"]
+header = f"  {'':10}" + "".join(f"  {l:>10}" for l in labels)
+print(header)
+for i, row in enumerate(inv_S_B):
+    print(f"  {labels[i]:10}" + "".join(f"  {v:>10.1f}" for v in row))
+
+print(f"\n  Row sums of Σ⁻¹  (= unnormalised weights w̃ᵢ):")
+row_sums = inv_S_B.sum(axis=1)
+total    = row_sums.sum()
+for name, diag, row_s, w_i in zip(
+        labels,
+        np.diag(inv_S_B),
+        row_sums,
+        w_B):
+    off_diag = row_s - diag
+    print(f"  {name:10}  diag={diag:>8.1f}  off-diag={off_diag:>9.1f}"
+          f"  row_sum={row_s:>8.1f}  → weight={w_i:.4f}  ({w_i:.1%})")
+print(f"  {'Total':10}  {'':>8}  {'':>9}  total   ={total:>8.1f}")
+
+print(f"\n  Effect 1 — Variance: diagonal of Σ⁻¹ vs naive 1/σ²")
+print(f"  {'Asset':10}  {'σ²':>10}  {'1/σ² (naive)':>14}  {'Prec diag':>10}")
+for i, (name, vol) in enumerate(zip(labels, vols_B)):
+    var = vol**2
+    print(f"  {name:10}  {var:>10.6f}  {1/var:>14.1f}  "
+          f"{inv_S_B[i,i]:>10.1f}")
+
+print(f"\n  Effect 2 — Correlation penalty (negative off-diagonal drain)")
+print(f"  {'Asset':10}  {'Diag':>8}  {'Drain':>9}  {'RowSum':>8}  "
+      f"{'Drain %':>8}")
+for name, diag, row_s in zip(labels, np.diag(inv_S_B), row_sums):
+    drain = row_s - diag
+    print(f"  {name:10}  {diag:>8.1f}  {drain:>9.1f}  {row_s:>8.1f}  "
+          f"{drain/diag*100:>7.1f}%")
+
+print(f"\n  GMV vs Inverse-Variance (1/σ²) comparison:")
+inv_var_B = 1 / np.diag(Sigma_B)
+w_ivw_B   = inv_var_B / inv_var_B.sum()
+var_ivw   = float(w_ivw_B @ Sigma_B @ w_ivw_B)
+var_gmv   = float(w_B @ Sigma_B @ w_B)
+print(f"  {'Asset':10}  {'IVW weight':>12}  {'GMV weight':>12}")
+for name, wi, wg in zip(labels, w_ivw_B, w_B):
+    print(f"  {name:10}  {wi:>11.4f}   {wg:>11.4f}")
+print(f"  {'IVW vol':10}  {var_ivw**0.5:.4%}")
+print(f"  {'GMV vol':10}  {var_gmv**0.5:.4%}")
+print(f"  GMV saves extra {var_ivw**0.5 - var_gmv**0.5:.4%} over IVW by")
+print(f"  penalising B+C correlation (ρ_BC={rho_B[1,2]:.2f}).")
 
 
 # ===========================================================================
