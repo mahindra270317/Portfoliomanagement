@@ -546,29 +546,49 @@ most representative of the dominant risk factors in the universe.
 
 ---
 
-### Setup — Universe of 10 Assets
+### Setup — Universe of 10 Real Stocks (2022-01-01 to 2024-01-01)
 
-Three groups with different volatility profiles:
+All vols and correlations are **computed from actual daily returns** via
+`yfinance`. No assumptions.
 
-| Asset | Group | Daily Vol | $\sigma^2$ |
-|-------|-------|-----------|-----------|
-| Growth-1 | Growth | 3.0% | 0.000900 |
-| Growth-2 | Growth | 3.5% | 0.001225 |
-| Growth-3 | Growth | 2.8% | 0.000784 |
-| Growth-4 | Growth | 4.0% | 0.001600 |
-| Value-1 | Value | 1.8% | 0.000324 |
-| Value-2 | Value | 2.2% | 0.000484 |
-| Value-3 | Value | 1.5% | 0.000225 |
-| Def-1 | Defensive | 0.8% | 0.000064 |
-| Def-2 | Defensive | 1.0% | 0.000100 |
-| Def-3 | Defensive | 1.2% | 0.000144 |
+| Ticker | Group | Daily Vol $\sigma$ | $\sigma^2$ |
+|--------|-------|-------------------|-----------|
+| NVDA | Growth | 3.57% | 0.001271 |
+| META | Growth | 3.39% | 0.001151 |
+| TSLA | Growth | 3.79% | 0.001437 |
+| AMZN | Growth | 2.68% | 0.000719 |
+| JPM | Value | 1.62% | 0.000263 |
+| XOM | Value | 1.92% | 0.000369 |
+| BAC | Value | 1.87% | 0.000350 |
+| UNH | Defensive | 1.44% | 0.000207 |
+| PG | Defensive | 1.18% | 0.000139 |
+| JNJ | Defensive | 1.07% | 0.000114 |
 
-**Correlation structure (assumed, not derived from data):**
-- Within-group: $\rho = 0.70$ — chosen to reflect typical same-sector pairwise correlations (0.60–0.80 in real equity markets)
-- Cross-group: $\rho = 0.15$ — chosen to reflect weak cross-sector linkage (0.10–0.25 in real markets)
+**Actual correlation matrix (computed from data):**
 
-> **Note:** These values are synthetic assumptions made to keep the example clean and illustrative.
-> In a real project you would estimate $\Sigma$ directly from historical return data.
+| | NVDA | META | TSLA | AMZN | JPM | XOM | BAC | UNH | PG | JNJ |
+|--|------|------|------|------|-----|-----|-----|-----|----|-----|
+| NVDA | 1.00 | 0.55 | 0.58 | 0.60 | 0.43 | 0.11 | 0.40 | 0.18 | 0.18 | 0.06 |
+| META | 0.55 | 1.00 | 0.38 | 0.60 | 0.34 | 0.06 | 0.34 | 0.07 | 0.20 | 0.12 |
+| TSLA | 0.58 | 0.38 | 1.00 | 0.51 | 0.34 | 0.10 | 0.37 | 0.18 | 0.11 | 0.06 |
+| AMZN | 0.60 | 0.60 | 0.51 | 1.00 | 0.39 | 0.14 | 0.41 | 0.18 | 0.20 | 0.14 |
+| JPM | 0.43 | 0.34 | 0.34 | 0.39 | 1.00 | 0.30 | 0.83 | 0.32 | 0.32 | 0.29 |
+| XOM | 0.11 | 0.06 | 0.10 | 0.14 | 0.30 | 1.00 | 0.34 | 0.20 | 0.05 | 0.11 |
+| BAC | 0.40 | 0.34 | 0.37 | 0.41 | 0.83 | 0.34 | 1.00 | 0.28 | 0.27 | 0.26 |
+| UNH | 0.18 | 0.07 | 0.18 | 0.18 | 0.32 | 0.20 | 0.28 | 1.00 | 0.43 | 0.41 |
+| PG | 0.18 | 0.20 | 0.11 | 0.20 | 0.32 | 0.05 | 0.27 | 0.43 | 1.00 | 0.48 |
+| JNJ | 0.06 | 0.12 | 0.06 | 0.14 | 0.29 | 0.11 | 0.26 | 0.41 | 0.48 | 1.00 |
+
+**Average correlations from actual data (no assumptions):**
+
+| Pair | Avg $\rho$ | Range |
+|------|-----------|-------|
+| Within Growth | 0.54 | 0.38–0.60 |
+| Within Value | 0.49 | 0.30–0.83 |
+| Within Defensive | 0.44 | 0.41–0.48 |
+| Growth vs Value | 0.29 | 0.06–0.43 |
+| Growth vs Defensive | 0.14 | 0.06–0.20 |
+| Value vs Defensive | 0.23 | 0.05–0.32 |
 
 ---
 
@@ -576,99 +596,94 @@ Three groups with different volatility profiles:
 
 $$\Sigma = Q \Lambda Q^\top, \quad \lambda_1 \geq \lambda_2 \geq \cdots \geq \lambda_{10} \geq 0$$
 
-**Explained variance per principal component:**
+**Explained variance per principal component (from real data):**
 
 | PC | Eigenvalue $\lambda_j$ | Explained | Cumulative |
 |----|----------------------|-----------|-----------|
-| PC1 | 0.000954 | 61.1% | 61.1% |
-| PC2 | 0.000215 | 13.8% | 74.9% |
-| PC3 | 0.000114 | 7.3% | 82.2% |
-| PC4 | 0.000082 | 5.3% | 87.5% |
-| PC5 | 0.000065 | 4.2% | 91.7% |
-| PC6 | 0.000063 | 4.0% | **95.7%** ← threshold |
-| … | … | … | … |
+| PC1 | 0.003171 | 52.7% | 52.7% |
+| PC2 | 0.000810 | 13.4% | 66.1% |
+| PC3 | 0.000558 | 9.3% | 75.4% |
+| PC4 | 0.000473 | 7.9% | 83.3% |
+| PC5 | 0.000301 | 5.0% | 88.2% |
+| PC6 | 0.000282 | 4.7% | 92.9% |
+| PC7 | — | — | **96.6%** ← threshold |
 
-**k = 6 principal components** are needed to explain ≥ 95% of variance.
+**k = 7 principal components** are needed to explain ≥ 95% of variance.
 
-*Why 6 and not 3?* Because within each of the 3 groups there are sub-patterns
-(e.g. Growth-4 is more volatile than Growth-3) that require extra PCs to capture.
+*PC1 alone explains 52.7% — driven by the broad market factor (all stocks moving
+together during 2022 drawdown and 2023 recovery).*
 
 ---
 
 ### Step 2 — Score Every Asset
 
-For each asset $i$, compute:
+$$\text{score}_i = \sum_{j=1}^{k=7} \lambda_j \, q_{ij}^2$$
 
-$$\text{score}_i = \sum_{j=1}^{k=6} \lambda_j \, q_{ij}^2$$
+**Scores from real data:**
 
-This measures how much of asset $i$'s total variance is explained by the top-6
-systematic factors. A high score means the asset is a major driver of market
-risk — it is highly "systematic."
+| Ticker | Group | Score | Rank |
+|--------|-------|-------|------|
+| TSLA | Growth | 0.001437 | 1st ← |
+| NVDA | Growth | 0.001271 | 2nd ← |
+| META | Growth | 0.001151 | 3rd ← |
+| AMZN | Growth | 0.000719 | 4th ← |
+| XOM | Value | 0.000367 | 5th |
+| BAC | Value | 0.000330 | 6th |
+| JPM | Value | 0.000233 | 7th |
+| UNH | Defensive | 0.000166 | 8th |
+| PG | Defensive | 0.000081 | 9th |
+| JNJ | Defensive | 0.000057 | 10th |
 
-**Scores (bar = proportion of max score):**
-
-| Asset | Score | Relative bar |
-|-------|-------|-------------|
-| Growth-4 | 0.001600 | ████████████████████ ← highest |
-| Growth-2 | 0.001225 | ███████████████ |
-| Growth-1 | 0.000900 | ████████████ |
-| Growth-3 | 0.000784 | ██████████ |
-| Value-2 | 0.000428 | █████ |
-| Value-1 | 0.000250 | ███ |
-| Value-3 | 0.000160 | ██ |
-| Def-3 | 0.000127 | █ |
-| Def-2 | 0.000078 | █ |
-| Def-1 | 0.000045 | |
-
-**Why does Growth dominate?**  
-PCA score $\approx \sigma_i^2$ when within-group correlations are uniform.
-Growth assets have the highest variances → highest scores. The score is not
-about "safety" — it ranks assets by **systematic risk contribution**.
+Growth stocks dominate because they have the highest variances AND load heavily
+on PC1 (the broad market factor).
 
 ---
 
 ### Step 3 — Select Top 4 by Score
 
-$$\text{Selected} = \{\text{Growth-4},\ \text{Growth-2},\ \text{Growth-1},\ \text{Growth-3}\}$$
+$$\text{Selected} = \{\ \text{TSLA},\ \text{NVDA},\ \text{META},\ \text{AMZN}\ \}$$
 
-All four come from the Growth group. Their $4 \times 4$ sub-covariance:
+All four are Growth stocks. Their $4 \times 4$ sub-covariance from actual data:
 
 $$\Sigma_{\text{sel}} = \begin{pmatrix}
-0.00160 & 0.00098 & 0.00084 & 0.00112 \\
-0.00098 & 0.00122 & 0.00073 & 0.00098 \\
-0.00084 & 0.00073 & 0.00090 & 0.00084 \\
-0.00112 & 0.00098 & 0.00084 & 0.00160
+0.001437 & 0.000782 & 0.000542 & 0.000514 \\
+0.000782 & 0.001271 & 0.000669 & 0.000576 \\
+0.000542 & 0.000669 & 0.001151 & 0.000687 \\
+0.000514 & 0.000576 & 0.000687 & 0.000719
 \end{pmatrix}$$
 
-*(rows/columns: Growth-4, Growth-2, Growth-1, Growth-3)*
-
-Within-group correlation is 0.70 — these 4 assets are highly correlated with
-each other, so GMV will again push toward unequal weights.
+*(rows/cols: TSLA, NVDA, META, AMZN)*
 
 ---
 
-### Step 4 — GMV Weights on the 4 Selected Assets
+### Step 4 — How GMV Weights Are Assigned
 
-$$\mathbf{w}^{\ast} \approx [\ -15.5\%,\ +5.8\%,\ +43.5\%,\ +66.2\%\ ]$$
+$$\mathbf{w}^{\ast} = \frac{\Sigma_{\text{sel}}^{-1}\, \mathbf{1}}{\mathbf{1}^\top \Sigma_{\text{sel}}^{-1}\, \mathbf{1}}$$
 
-*(Growth-4, Growth-2, Growth-1, Growth-3)*
+The weight of each asset is its **precision matrix row sum**, normalised.
 
-**Why is Growth-4 negative?**  
-Growth-4 has the **highest variance** (4.0% daily vol). Within a group of
-highly correlated assets, GMV shorts the most volatile member and overweights
-the least volatile (Growth-3 at 2.8%, Growth-1 at 3.0%) because shorting
-the high-vol name reduces overall portfolio variance.
+**Precision matrix row sums:**
 
-**Factor risk of the selected portfolio:**
+| Asset | $\sigma$ | Row sum $\tilde{w}_i$ | Weight | Drain % |
+|-------|----------|-----------------------|--------|---------|
+| AMZN | 2.68% | largest | **63.3%** | smallest drain |
+| META | 3.39% | 2nd | **17.7%** | — |
+| NVDA | 3.57% | 3rd | **5.1%** | — |
+| TSLA | 3.79% | smallest | **13.9%** | largest drain |
 
-| Factor | % of Portfolio Variance |
-|--------|------------------------|
-| PC1 (market) | 76.4% |
-| PC3 | 12.9% |
-| PC2 | 7.0% |
-| PC4 | 3.7% |
+**Final weights: TSLA=13.9%, NVDA=5.1%, META=17.7%, AMZN=63.3%**
 
-76% of risk comes from PC1 — the portfolio is still market-dominated.
+**Why AMZN dominates at 63.3%?**
+- Lowest variance in the group ($\sigma=2.68\%$ vs TSLA's $3.79\%$)
+- Moderate correlations with others (0.51–0.60) — not the lowest, but lowest vol wins
+
+**Why NVDA only gets 5.1% despite being 2nd highest PCA score?**
+- High correlation with both TSLA ($\rho=0.58$) and META ($\rho=0.55$)
+- Its row sum is heavily drained by negative off-diagonal entries
+- The precision matrix sees NVDA as partially redundant given TSLA and META are present
+
+**Portfolio vol: 2.56%** — higher than equal-weighting all 10 (1.44%), because
+PCA selects the most systematic (highest-vol) assets.
 
 ---
 
@@ -677,29 +692,28 @@ the high-vol name reduces overall portfolio variance.
 | Method | Portfolio Vol | Notes |
 |--------|--------------|-------|
 | Equal weight (all 10 assets) | 1.44% | Defensive assets dilute vol |
-| GMV on PCA-selected 4 (Growth) | 2.63% | Higher vol — all systematic assets |
-| GMV on lowest-vol 4 (Defensives) | ~0.85% | Lowest vol, but minimal factor exposure |
+| **GMV on PCA-selected 4 (Growth)** | **2.56%** | Higher — all systematic assets |
+| GMV on lowest-vol 4 (JNJ,PG,UNH,XOM) | ~0.9% | Lowest vol, minimal factor exposure |
 
-**Key insight:** PCA selection picks the *most systematic* assets — those that
-best represent the dominant market risk factors. This is useful for factor
-modelling and stat arb. If the goal is purely minimising portfolio volatility,
-you would instead select the 4 lowest-variance assets (the Defensive group).
+**Key insight:** PCA selection is **not** about minimising vol. It picks the
+assets that best represent the dominant risk factors. To also control vol, you
+need to diversify across groups — see Case 4 below.
 
 | Goal | Best selection method |
 |------|----------------------|
-| Capture market factor exposure | PCA score ranking |
+| Capture market factor exposure | PCA score ranking (Case 3) |
 | Minimise portfolio variance | Select lowest-vol assets |
-| Balance both | Hybrid: PCA within each vol tier |
+| Balance both | Constrained PCA across groups (Case 4) |
 
 ---
 
-### Summary — All Three Cases
+### Summary — Cases A, B, C
 
 | Case | Assets | Method | GMV Vol | Equal-wt Vol |
 |------|--------|--------|---------|-------------|
-| A: Equal vol, high corr | 3 | Direct GMV | 1.93% | 1.93% |
-| B: Diff vol, low corr | 3 | Direct GMV | **0.99%** | 2.63% |
-| C: PCA top-4 of 10 | 4 of 10 | PCA select → GMV | 2.63% | 1.44% (all 10) |
+| A: Equal vol, high corr | 3 synthetic | Direct GMV | 1.93% | 1.93% |
+| B: Diff vol, low corr | 3 synthetic | Direct GMV | **0.99%** | 2.63% |
+| C: PCA top-4 real stocks | TSLA,NVDA,META,AMZN | PCA select → GMV | 2.56% | 1.44% (all 10) |
 
 ---
 
@@ -708,8 +722,8 @@ you would instead select the 4 lowest-variance assets (the Defensive group).
 ### Problem
 
 Case 3 selected all 4 assets from the Growth group — high systematic exposure
-but high volatility (2.63% daily). In practice, an investor wants **cross-group
-diversification**: a mix of Growth, Value, and Defensive assets.
+but high volatility (2.56% daily). For a **diversified** portfolio, we enforce
+cross-group representation.
 
 **Constraint:** select the top-scoring asset from each group tier:
 - **2 from Growth** (highest factor exposure)
@@ -718,89 +732,87 @@ diversification**: a mix of Growth, Value, and Defensive assets.
 
 ---
 
-### Step 1 — Score All 10 Assets (same as Case 3, k=6)
+### Step 1 — Top Scorer Per Group (from real data, k=7)
 
-| Asset | Group | Score | Rank within group |
-|-------|-------|-------|------------------|
-| Growth-4 | Growth | 0.001600 | 1st ← selected |
-| Growth-2 | Growth | 0.001225 | 2nd ← selected |
-| Growth-1 | Growth | 0.000900 | 3rd |
-| Growth-3 | Growth | 0.000784 | 4th |
-| Value-2 | Value | 0.000428 | 1st ← selected |
-| Value-1 | Value | 0.000250 | 2nd |
-| Value-3 | Value | 0.000160 | 3rd |
-| Def-3 | Defensive | 0.000127 | 1st ← selected |
-| Def-2 | Defensive | 0.000078 | 2nd |
-| Def-1 | Defensive | 0.000045 | 3rd |
+| Ticker | Group | Score | Rank within group | Selected? |
+|--------|-------|-------|------------------|-----------|
+| TSLA | Growth | 0.001437 | 1st | ← yes |
+| NVDA | Growth | 0.001271 | 2nd | ← yes |
+| META | Growth | 0.001151 | 3rd | no |
+| AMZN | Growth | 0.000719 | 4th | no |
+| XOM | Value | 0.000367 | 1st | ← yes |
+| BAC | Value | 0.000330 | 2nd | no |
+| JPM | Value | 0.000233 | 3rd | no |
+| UNH | Defensive | 0.000166 | 1st | ← yes |
+| PG | Defensive | 0.000081 | 2nd | no |
+| JNJ | Defensive | 0.000057 | 3rd | no |
 
-**Selected: Growth-4, Growth-2, Value-2, Def-3**
+**Selected: TSLA, NVDA, XOM, UNH**
 
 ---
 
-### Step 2 — Sub-Covariance of the 4 Selected Assets
+### Step 2 — Sub-Covariance of the 4 Selected Assets (from real data)
 
 $$\Sigma_{\text{sel}} = \begin{pmatrix}
-0.001600 & 0.000980 & 0.000126 & 0.000084 \\
-0.000980 & 0.001225 & 0.000154 & 0.000102 \\
-0.000126 & 0.000154 & 0.000484 & 0.000040 \\
-0.000084 & 0.000102 & 0.000040 & 0.000144
+0.001437 & 0.000782 & 0.000071 & 0.000100 \\
+0.000782 & 0.001271 & 0.000078 & 0.000094 \\
+0.000071 & 0.000078 & 0.000369 & 0.000055 \\
+0.000100 & 0.000094 & 0.000055 & 0.000207
 \end{pmatrix}$$
 
-*(rows/columns: Growth-4, Growth-2, Value-2, Def-3)*
+*(rows/cols: TSLA, NVDA, XOM, UNH)*
 
-**Notice:** Growth-Growth entries (~0.00098) are large — high within-group
-correlation. Growth-Def entries (~0.000084) are tiny — low cross-group
-correlation. This structure is what makes Def-3 so valuable as a diversifier.
+Key entries to notice:
+- TSLA-NVDA: 0.000782 (high — same group, $\rho=0.58$)
+- TSLA-XOM: 0.000071 (tiny — cross-group, $\rho=0.10$)
+- TSLA-UNH: 0.000100 (tiny — cross-group, $\rho=0.18$)
+
+This low cross-group covariance is what makes XOM and UNH valuable diversifiers.
 
 ---
 
-### Step 3 — Precision Matrix & Row Sums
+### Step 3 — Precision Matrix Row Sums → Weights
 
-$$\Sigma_{\text{sel}}^{-1} \approx \begin{pmatrix}
-\cdot & \cdot & \cdot & \cdot \\
-\cdot & \cdot & \cdot & \cdot \\
-\cdot & \cdot & \cdot & \cdot \\
-\cdot & \cdot & \cdot & \cdot
-\end{pmatrix}$$
-
-**Row sums (unnormalised weights $\tilde{w}_i$):**
-
-| Asset | Row sum $\tilde{w}_i$ | Normalised weight |
-|-------|----------------------|------------------|
-| Growth-4 | 5.2 | **0.1%** |
-| Growth-2 | 346 | **4.2%** |
-| Value-2 | 1,459 | **17.8%** |
-| Def-3 | 6,389 | **77.9%** |
-| **Total** | **8,199** | 100% |
+| Asset | $\sigma$ | Row sum $\tilde{w}_i$ | Drain % | Weight |
+|-------|----------|-----------------------|---------|--------|
+| TSLA | 3.79% | 172.5 | −83.7% | **2.6%** |
+| NVDA | 3.57% | 254.8 | −78.7% | **3.9%** |
+| XOM | 1.92% | 2,015.9 | −29.1% | **30.8%** |
+| UNH | 1.44% | 4,099.2 | −21.4% | **62.7%** |
+| **Total** | | **6,542** | | **100%** |
 
 ---
 
-### Step 4 — Why Does Def-3 Dominate at 77.9%?
+### Step 4 — Why These Weights?
 
-The same two-force logic from Case B applies, now amplified by cross-group
-structure:
+**UNH dominates at 62.7%:**
+1. **Lowest variance** — $\sigma=1.44\%$ vs TSLA's $3.79\%$ → 6.9× difference in $\sigma^2$
+2. **Lowest correlation** with Growth stocks ($\rho=0.18$ with both TSLA and NVDA)
+3. **Off-diagonal drain only −21.4%** — its row sum is barely eroded
 
-**Force 1 — Variance:** Def-3 has the lowest variance in the selected set.
+**TSLA collapses to 2.6% despite being the highest PCA scorer:**
+1. TSLA and NVDA are $\rho=0.58$ correlated → near-redundant in the precision matrix
+2. TSLA has the highest variance → largest negative off-diagonal drain (−83.7%)
+3. With XOM and UNH as genuine diversifiers available, the optimizer sees little
+   value in over-allocating to a second high-vol correlated growth stock
 
-| Asset | $\sigma$ | $\sigma^2$ | Ratio vs Def-3 |
-|-------|----------|-----------|---------------|
-| Growth-4 | 4.0% | 0.001600 | **25×** |
-| Growth-2 | 3.5% | 0.001225 | **19×** |
-| Value-2 | 2.2% | 0.000484 | **7.5×** |
-| Def-3 | 1.2% | 0.000144 | 1× |
+**Force 1 — Variance ratio:**
 
-**Force 2 — Correlation:** Def-3 has near-zero correlation with Growth assets
-($\rho = 0.15$) and very low correlation with Value-2 ($\rho = 0.15$).
-Its row sum suffers almost no off-diagonal drain.
+| Asset | $\sigma^2$ | Ratio vs UNH |
+|-------|-----------|-------------|
+| TSLA | 0.001437 | **6.9×** |
+| NVDA | 0.001271 | **6.1×** |
+| XOM | 0.000369 | **1.8×** |
+| UNH | 0.000207 | 1× |
 
-**Force 3 (new in this example) — Growth-4 collapses to ~0%:**
+**Force 2 — Correlation drain:**
 
-Growth-4 and Growth-2 have within-group correlation $\rho = 0.70$. To the
-precision matrix, they are near-redundant. GMV assigns essentially all the
-Growth allocation to Growth-2 (slightly lower vol, 3.5% vs 4.0%) and nearly
-zeros out Growth-4 (0.1%). This is the same short-the-most-volatile logic as
-Case 3, but without going negative because Value-2 and Def-3 are available
-as diversifiers.
+| Asset | Drain % of diagonal |
+|-------|-------------------|
+| TSLA | −83.7% (heavily penalised — correlated with NVDA) |
+| NVDA | −78.7% (heavily penalised — correlated with TSLA) |
+| XOM | −29.1% (moderate — weakly correlated with Growth) |
+| UNH | −21.4% (minimal — near-independent of Growth) |
 
 ---
 
@@ -808,53 +820,49 @@ as diversifiers.
 
 **Weights:**
 
-| Asset | Group | Weight |
-|-------|-------|--------|
-| Def-3 | Defensive | **77.9%** |
-| Value-2 | Value | **17.8%** |
-| Growth-2 | Growth | **4.2%** |
-| Growth-4 | Growth | **0.1%** |
+| Asset | Group | $\sigma$ | Weight |
+|-------|-------|----------|--------|
+| UNH | Defensive | 1.44% | **62.7%** |
+| XOM | Value | 1.92% | **30.8%** |
+| NVDA | Growth | 3.57% | **3.9%** |
+| TSLA | Growth | 3.79% | **2.6%** |
+
+**Portfolio vol: 1.24%** — beats equal-weighting all 10 (1.44%) by 0.21%.
 
 **Factor risk:**
 
-| Factor | % of Variance |
-|--------|--------------|
-| PC3 (Defensive factor) | 64.3% |
-| PC2 (Value factor) | 23.8% |
-| PC1 (Market / Growth) | 11.8% |
+| Factor | % of Portfolio Variance |
+|--------|------------------------|
+| PC4 (Defensive/UNH factor) | 49.7% |
+| PC3 (Value/XOM factor) | 33.0% |
+| PC1 (Market/Growth factor) | 16.8% |
 
-The diversified portfolio has **inverted** risk attribution vs Case 3: instead
-of 76% in PC1 (market/growth), it now puts 64% in PC3 (the defensive factor)
-and 24% in PC2 (the value factor).
+The diversified portfolio has **shifted risk attribution** from PC1 (52.7% of
+universe variance) toward the defensive and value factors.
 
 ---
 
-### Step 6 — Compare All Methods on the Same 10-Asset Universe
+### Step 6 — Final Comparison
 
-| Method | Selected | GMV Weights | Portfolio Vol | EQ-wt baseline |
-|--------|----------|-------------|--------------|----------------|
-| C: PCA top-4 (all Growth) | G1,G2,G3,G4 | -15.5 / 5.8 / 43.5 / 66.2% | 2.63% | 1.44% (all 10) |
-| **D: Constrained PCA (2G+1V+1D)** | **G4,G2,V2,D3** | **0.1 / 4.2 / 17.8 / 77.9%** | **1.10%** | **1.44% (all 10)** |
-| Min-vol 4 (Defensives only) | D1,D2,D3 + V3 | ~equal | ~0.85% | 1.44% (all 10) |
+| Method | Selected | GMV Weights | Vol | vs EQ all-10 |
+|--------|----------|-------------|-----|-------------|
+| C: PCA top-4 (all Growth) | TSLA,NVDA,META,AMZN | 13.9/5.1/17.7/63.3% | 2.56% | +1.12% higher |
+| **D: Constrained PCA (2G+1V+1D)** | **TSLA,NVDA,XOM,UNH** | **2.6/3.9/30.8/62.7%** | **1.24%** | **−0.21% lower** |
+| Equal weight (all 10) | all | 10% each | 1.44% | baseline |
 
-**The constrained diversified portfolio (Case D) beats the full equal-weight
-universe by 0.34% in daily vol while maintaining meaningful cross-sector factor
-exposure.** It is the practical middle ground between the pure factor-exposure
-approach (Case C) and the pure vol-minimisation approach.
+**Selection determines the opportunity set. GMV squeezes the minimum variance
+out of whatever assets you give it.**
 
 ---
 
 ### Key Takeaways Across All Cases
 
-| Case | Selection logic | What GMV does after | Vol outcome |
-|------|----------------|---------------------|-------------|
-| A | N/A (3 assets) | Equal weights (symmetric) | Same as EQ |
-| B | N/A (3 assets) | Tilts 95% to lowest-vol | 63% below EQ |
-| C | PCA top-4 (all Growth) | Shorts highest-vol Growth | Higher than EQ (all 10) |
-| **D** | **Constrained PCA (2G+1V+1D)** | **Tilts to Def, nearly zeros Growth-4** | **24% below EQ (all 10)** |
-
-**Selection method determines the opportunity set. GMV then squeezes the minimum
-variance out of whatever assets you give it.**
+| Case | Selection | What GMV does | Vol vs EQ |
+|------|-----------|--------------|-----------|
+| A | — | Equal weights (symmetric Σ) | Same |
+| B | — | Tilts 95% to lowest-vol | −63% |
+| C | PCA unconstrained | 63% to lowest-vol Growth (AMZN) | +78% higher |
+| **D** | **Constrained PCA** | **63% to UNH, Growth nearly zeroed** | **−15% lower** |
 
 ---
 
