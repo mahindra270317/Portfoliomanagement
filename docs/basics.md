@@ -249,7 +249,41 @@ $$\mathbf{w}^* = \frac{\Sigma^{-1} \mathbf{1}}{\mathbf{1}^\top \Sigma^{-1} \math
 
 **Step 8 — Portfolio variance:**
 
-$$\mathbf{w}^{*\top} \Sigma \mathbf{w}^* \approx 0.566$$
+$$(\mathbf{w}^*)^\top \Sigma\, \mathbf{w}^* \approx 0.566$$
+
+---
+
+**Step 9 — Why are the weights near-equal $[0.29,\ 0.38,\ 0.33]$?**
+
+Look at the return data again. All three assets move almost perfectly together
+(correlation $\approx 0.99$). When assets are nearly identical in terms of risk
+and co-movement, the optimiser has very little reason to prefer one over another
+— the **inverse covariance matrix becomes nearly flat**, and the resulting
+weights converge toward $1/N$.
+
+To see this precisely, consider the extreme: if $\Sigma = \sigma^2 \mathbf{I}$
+(all assets independent, equal variance), then:
+
+$$\Sigma^{-1} = \frac{1}{\sigma^2} \mathbf{I}
+  \quad \Longrightarrow \quad
+  \mathbf{w}^* = \frac{\mathbf{1}}{N}$$
+
+Exactly equal weights. Our example is close to this degenerate case because
+all three assets are driven almost entirely by the **same single factor (PC1)**.
+
+**Step 10 — When do weights diverge from equal?**
+
+Weights become unequal when assets differ in either:
+
+| Condition | Effect on weights |
+|-----------|------------------|
+| Different variances ($\sigma_i \neq \sigma_j$) | Lower-variance asset gets more weight |
+| Imperfect correlation ($\rho_{ij} < 1$) | Asset that diversifies best gets more weight |
+| One asset provides a hedge | It can receive a **negative** (short) weight |
+
+In practice with real equity data (e.g. NVDA vs XOM), correlations are much
+lower ($\rho \approx 0.3$–$0.6$) and variances differ significantly — so the
+GMV weights will diverge meaningfully from $1/N$.
 
 ---
 
