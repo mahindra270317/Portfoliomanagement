@@ -563,9 +563,12 @@ Three groups with different volatility profiles:
 | Def-2 | Defensive | 1.0% | 0.000100 |
 | Def-3 | Defensive | 1.2% | 0.000144 |
 
-**Correlation structure:**
-- Within-group: $\rho = 0.70$ (assets in the same sector move together)
-- Cross-group: $\rho = 0.15$ (weak cross-sector linkage)
+**Correlation structure (assumed, not derived from data):**
+- Within-group: $\rho = 0.70$ — chosen to reflect typical same-sector pairwise correlations (0.60–0.80 in real equity markets)
+- Cross-group: $\rho = 0.15$ — chosen to reflect weak cross-sector linkage (0.10–0.25 in real markets)
+
+> **Note:** These values are synthetic assumptions made to keep the example clean and illustrative.
+> In a real project you would estimate $\Sigma$ directly from historical return data.
 
 ---
 
@@ -700,11 +703,166 @@ you would instead select the 4 lowest-variance assets (the Defensive group).
 
 ---
 
-## 16. Run the Code
+## 16. Case 4 — Diversified Selection: Constrained PCA Across Groups
+
+### Problem
+
+Case 3 selected all 4 assets from the Growth group — high systematic exposure
+but high volatility (2.63% daily). In practice, an investor wants **cross-group
+diversification**: a mix of Growth, Value, and Defensive assets.
+
+**Constraint:** select the top-scoring asset from each group tier:
+- **2 from Growth** (highest factor exposure)
+- **1 from Value** (mid-vol anchor)
+- **1 from Defensive** (vol dampener)
+
+---
+
+### Step 1 — Score All 10 Assets (same as Case 3, k=6)
+
+| Asset | Group | Score | Rank within group |
+|-------|-------|-------|------------------|
+| Growth-4 | Growth | 0.001600 | 1st ← selected |
+| Growth-2 | Growth | 0.001225 | 2nd ← selected |
+| Growth-1 | Growth | 0.000900 | 3rd |
+| Growth-3 | Growth | 0.000784 | 4th |
+| Value-2 | Value | 0.000428 | 1st ← selected |
+| Value-1 | Value | 0.000250 | 2nd |
+| Value-3 | Value | 0.000160 | 3rd |
+| Def-3 | Defensive | 0.000127 | 1st ← selected |
+| Def-2 | Defensive | 0.000078 | 2nd |
+| Def-1 | Defensive | 0.000045 | 3rd |
+
+**Selected: Growth-4, Growth-2, Value-2, Def-3**
+
+---
+
+### Step 2 — Sub-Covariance of the 4 Selected Assets
+
+$$\Sigma_{\text{sel}} = \begin{pmatrix}
+0.001600 & 0.000980 & 0.000126 & 0.000084 \\
+0.000980 & 0.001225 & 0.000154 & 0.000102 \\
+0.000126 & 0.000154 & 0.000484 & 0.000040 \\
+0.000084 & 0.000102 & 0.000040 & 0.000144
+\end{pmatrix}$$
+
+*(rows/columns: Growth-4, Growth-2, Value-2, Def-3)*
+
+**Notice:** Growth-Growth entries (~0.00098) are large — high within-group
+correlation. Growth-Def entries (~0.000084) are tiny — low cross-group
+correlation. This structure is what makes Def-3 so valuable as a diversifier.
+
+---
+
+### Step 3 — Precision Matrix & Row Sums
+
+$$\Sigma_{\text{sel}}^{-1} \approx \begin{pmatrix}
+\cdot & \cdot & \cdot & \cdot \\
+\cdot & \cdot & \cdot & \cdot \\
+\cdot & \cdot & \cdot & \cdot \\
+\cdot & \cdot & \cdot & \cdot
+\end{pmatrix}$$
+
+**Row sums (unnormalised weights $\tilde{w}_i$):**
+
+| Asset | Row sum $\tilde{w}_i$ | Normalised weight |
+|-------|----------------------|------------------|
+| Growth-4 | 5.2 | **0.1%** |
+| Growth-2 | 346 | **4.2%** |
+| Value-2 | 1,459 | **17.8%** |
+| Def-3 | 6,389 | **77.9%** |
+| **Total** | **8,199** | 100% |
+
+---
+
+### Step 4 — Why Does Def-3 Dominate at 77.9%?
+
+The same two-force logic from Case B applies, now amplified by cross-group
+structure:
+
+**Force 1 — Variance:** Def-3 has the lowest variance in the selected set.
+
+| Asset | $\sigma$ | $\sigma^2$ | Ratio vs Def-3 |
+|-------|----------|-----------|---------------|
+| Growth-4 | 4.0% | 0.001600 | **25×** |
+| Growth-2 | 3.5% | 0.001225 | **19×** |
+| Value-2 | 2.2% | 0.000484 | **7.5×** |
+| Def-3 | 1.2% | 0.000144 | 1× |
+
+**Force 2 — Correlation:** Def-3 has near-zero correlation with Growth assets
+($\rho = 0.15$) and very low correlation with Value-2 ($\rho = 0.15$).
+Its row sum suffers almost no off-diagonal drain.
+
+**Force 3 (new in this example) — Growth-4 collapses to ~0%:**
+
+Growth-4 and Growth-2 have within-group correlation $\rho = 0.70$. To the
+precision matrix, they are near-redundant. GMV assigns essentially all the
+Growth allocation to Growth-2 (slightly lower vol, 3.5% vs 4.0%) and nearly
+zeros out Growth-4 (0.1%). This is the same short-the-most-volatile logic as
+Case 3, but without going negative because Value-2 and Def-3 are available
+as diversifiers.
+
+---
+
+### Step 5 — Portfolio Characteristics
+
+**Weights:**
+
+| Asset | Group | Weight |
+|-------|-------|--------|
+| Def-3 | Defensive | **77.9%** |
+| Value-2 | Value | **17.8%** |
+| Growth-2 | Growth | **4.2%** |
+| Growth-4 | Growth | **0.1%** |
+
+**Factor risk:**
+
+| Factor | % of Variance |
+|--------|--------------|
+| PC3 (Defensive factor) | 64.3% |
+| PC2 (Value factor) | 23.8% |
+| PC1 (Market / Growth) | 11.8% |
+
+The diversified portfolio has **inverted** risk attribution vs Case 3: instead
+of 76% in PC1 (market/growth), it now puts 64% in PC3 (the defensive factor)
+and 24% in PC2 (the value factor).
+
+---
+
+### Step 6 — Compare All Methods on the Same 10-Asset Universe
+
+| Method | Selected | GMV Weights | Portfolio Vol | EQ-wt baseline |
+|--------|----------|-------------|--------------|----------------|
+| C: PCA top-4 (all Growth) | G1,G2,G3,G4 | -15.5 / 5.8 / 43.5 / 66.2% | 2.63% | 1.44% (all 10) |
+| **D: Constrained PCA (2G+1V+1D)** | **G4,G2,V2,D3** | **0.1 / 4.2 / 17.8 / 77.9%** | **1.10%** | **1.44% (all 10)** |
+| Min-vol 4 (Defensives only) | D1,D2,D3 + V3 | ~equal | ~0.85% | 1.44% (all 10) |
+
+**The constrained diversified portfolio (Case D) beats the full equal-weight
+universe by 0.34% in daily vol while maintaining meaningful cross-sector factor
+exposure.** It is the practical middle ground between the pure factor-exposure
+approach (Case C) and the pure vol-minimisation approach.
+
+---
+
+### Key Takeaways Across All Cases
+
+| Case | Selection logic | What GMV does after | Vol outcome |
+|------|----------------|---------------------|-------------|
+| A | N/A (3 assets) | Equal weights (symmetric) | Same as EQ |
+| B | N/A (3 assets) | Tilts 95% to lowest-vol | 63% below EQ |
+| C | PCA top-4 (all Growth) | Shorts highest-vol Growth | Higher than EQ (all 10) |
+| **D** | **Constrained PCA (2G+1V+1D)** | **Tilts to Def, nearly zeros Growth-4** | **24% below EQ (all 10)** |
+
+**Selection method determines the opportunity set. GMV then squeezes the minimum
+variance out of whatever assets you give it.**
+
+---
+
+## 17. Run the Code
 
 ```bash
 python examples/basics.py
 ```
 
-All three cases are implemented in [`examples/basics.py`](../examples/basics.py)
+All four cases are implemented in [`examples/basics.py`](../examples/basics.py)
 with step-by-step printed output matching this document.

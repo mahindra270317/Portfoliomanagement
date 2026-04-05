@@ -1,10 +1,11 @@
 """
-basics.py — Three worked examples from docs/basics.md
-======================================================
+basics.py — Four worked examples from docs/basics.md
+=====================================================
 
-Case A: High correlation, equal variance      → near-equal GMV weights
-Case B: Low correlation, different variance   → heavily skewed GMV weights
-Case C: 10-asset universe, PCA-based selection of top 4 → GMV on subset
+Case A: High correlation, equal variance        → near-equal GMV weights
+Case B: Low correlation, different variance     → heavily skewed GMV weights
+Case C: 10-asset universe, PCA top-4 → GMV     → all-Growth, high vol
+Case D: Constrained PCA (2 Growth+1 Value+1 Def) → diversified, lower vol
 
 Key concept:
     GMV weights depend on BOTH variance and correlation.
@@ -308,26 +309,115 @@ print(f"""
 
 
 # ===========================================================================
-# Final summary table
+# CASE D — Constrained PCA: 2 Growth + 1 Value + 1 Defensive
+# ===========================================================================
+print(f"\n{DIVIDER}")
+print("  CASE D: Constrained PCA — diversified cross-group selection")
+print("  Rule: top-2 Growth + top-1 Value + top-1 Defensive by PCA score")
+print("  Expected result: Def-3 dominates (~78%), Growth nearly zeroed out")
+print(DIVIDER)
+
+# Reuse Sigma_C and scores_C from Case C above
+groups = {
+    "Growth":    list(range(0, 4)),
+    "Value":     list(range(4, 7)),
+    "Defensive": list(range(7, 10)),
+}
+quota = {"Growth": 2, "Value": 1, "Defensive": 1}
+
+div_idx = []
+for group_name, members in groups.items():
+    top_n = sorted(members, key=lambda i: scores_C[i], reverse=True)[:quota[group_name]]
+    div_idx.extend(top_n)
+
+div_names = [asset_names[i] for i in div_idx]
+print(f"\n  Selected assets (by group quota):")
+for name, idx in zip(div_names, div_idx):
+    group = next(g for g, m in groups.items() if idx in m)
+    print(f"    {name:<12}  group={group:<12}  score={scores_C[idx]:.6f}"
+          f"  vol={vols_C[idx]*100:.1f}%")
+
+Sigma_div = Sigma_C[np.ix_(div_idx, div_idx)]
+w_div     = gmv_weights(Sigma_div)
+
+print(f"\n  Sub-covariance (4×4):")
+header = f"  {'':14}" + "".join(f"  {n:>12}" for n in div_names)
+print(header)
+for i, row in enumerate(Sigma_div):
+    print(f"  {div_names[i]:<14}" + "".join(f"  {v:>12.6f}" for v in row))
+
+# Precision matrix breakdown
+inv_S_div = np.linalg.inv(Sigma_div)
+row_sums_div = inv_S_div.sum(axis=1)
+total_div    = row_sums_div.sum()
+
+print(f"\n  Precision matrix row sums → weights:")
+print(f"  {'Asset':<14}  {'σ (daily)':>10}  {'Row sum':>10}  {'Weight':>10}  {'Drain %':>8}")
+for name, idx, rs, wi in zip(div_names, div_idx, row_sums_div, w_div):
+    diag  = inv_S_div[div_names.index(name), div_names.index(name)]
+    drain = (rs - diag) / diag * 100
+    print(f"  {name:<14}  {vols_C[idx]*100:>9.1f}%  {rs:>10.1f}  "
+          f"{wi:>9.1%}  {drain:>+8.1f}%")
+
+port_var_div = float(w_div @ Sigma_div @ w_div)
+eq_w_all10   = np.ones(N) / N
+eq_var_all10 = float(eq_w_all10 @ Sigma_C @ eq_w_all10)
+eq_w_4       = np.ones(4) / 4
+eq_var_4     = float(eq_w_4 @ Sigma_div @ eq_w_4)
+
+print(f"\n  Portfolio vols:")
+print(f"    GMV diversified 4     : {port_var_div**0.5:.4%}")
+print(f"    Equal-wt these 4      : {eq_var_4**0.5:.4%}")
+print(f"    Equal-wt all 10       : {eq_var_all10**0.5:.4%}")
+print(f"    Case C (PCA top-4 GMV): {(w_C @ Sigma_sel @ w_C)**0.5:.4%}")
+
+# Factor risk
+eigvals_d, eigvecs_d = eigen_decompose(Sigma_div)
+z_d        = eigvecs_d.T @ w_div
+risk_d     = eigvals_d * z_d**2
+print(f"\n  Factor risk breakdown:")
+for j, (lam, zj, rc) in enumerate(zip(eigvals_d, z_d, risk_d)):
+    pct = rc / port_var_div * 100
+    if pct > 0.5:
+        print(f"    PC{j+1}: {pct:5.1f}%")
+
+print(f"""
+  Why Def-3 dominates at ~78%:
+    1. Variance: σ²(Def-3)=0.000144 vs σ²(Growth-4)=0.001600 → 11× difference
+    2. Correlation: Def-3 has ρ=0.15 with Growth/Value → tiny off-diagonal drain
+    3. Growth-4 vs Growth-2 are ρ=0.70 correlated → GMV nearly zeros Growth-4
+       (redundant given Growth-2 is present and has lower vol)
+
+  Result: diversified selection gives {eq_var_all10**0.5 - port_var_div**0.5:.3%} vol saving
+  vs equal-weighting all 10, while maintaining cross-sector exposure.
+  Compare to Case C (all-Growth GMV) which was {(w_C@Sigma_sel@w_C)**0.5 - eq_var_all10**0.5:.3%} ABOVE equal-weight.
+""")
+
+
+# ===========================================================================
+# Final summary table — all four cases
 # ===========================================================================
 print(DIVIDER)
-print("  SUMMARY")
+print("  SUMMARY — All Four Cases")
 print(DIVIDER)
-print(f"  {'Case':<38} {'GMV vol':>8}  {'EQ vol':>8}  {'Diff':>8}")
-print(f"  {'-'*38} {'-'*8}  {'-'*8}  {'-'*8}")
+print(f"  {'Case':<42} {'GMV vol':>8}  {'EQ vol (ref)':>13}  {'Diff':>8}")
+print(f"  {'-'*42} {'-'*8}  {'-'*13}  {'-'*8}")
 
-for label, Sigma_opt, Sigma_ref in [
-    ("A: Equal vol, high corr  (3 assets)",   Sigma_A, Sigma_A),
-    ("B: Diff vol,  low corr   (3 assets)",   Sigma_B, Sigma_B),
-    ("C: PCA top-4 of 10 assets (GMV on 4)",  Sigma_sel, Sigma_C),
-]:
+cases_summary = [
+    ("A: Equal vol, high corr  (3 assets)",    Sigma_A,   Sigma_A,   "same 3"),
+    ("B: Diff vol,  low corr   (3 assets)",    Sigma_B,   Sigma_B,   "same 3"),
+    ("C: PCA top-4 Growth only (GMV on 4)",    Sigma_sel, Sigma_C,   "all 10"),
+    ("D: Constrained PCA 2G+1V+1D (GMV on 4)",Sigma_div, Sigma_C,   "all 10"),
+]
+for label, Sigma_opt, Sigma_ref, ref_label in cases_summary:
     w     = gmv_weights(Sigma_opt)
     gvol  = (w @ Sigma_opt @ w) ** 0.5
     n_ref = Sigma_ref.shape[0]
     eq_w  = np.ones(n_ref) / n_ref
     eqvol = (eq_w @ Sigma_ref @ eq_w) ** 0.5
     diff  = eqvol - gvol
-    note  = "↓ better" if diff > 0 else "↑ higher (by design)"
-    print(f"  {label:<38} {gvol:>7.3%}   {eqvol:>7.3%}   {diff:>+7.3%}  {note}")
+    note  = "↓ better" if diff > 0 else "↑ higher"
+    print(f"  {label:<42} {gvol:>7.3%}   {eqvol:>7.3%} ({ref_label})  "
+          f"{diff:>+7.3%}  {note}")
 
 print()
