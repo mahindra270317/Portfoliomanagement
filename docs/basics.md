@@ -136,7 +136,145 @@ These limitations motivate **shrinkage estimators** (Ledoit-Wolf) and
 
 ---
 
-## 8. Eigen Decomposition
+## 8. Why Price Covariance Is Wrong — Mathematical Proof
+
+Always compute covariance on **returns**, never on **prices**. There are three
+independent proofs, each attacking a different dimension of the problem.
+
+---
+
+### Proof 1 — Price Covariance Grows Without Bound (Non-Stationarity)
+
+**Model:** Assume log-prices follow a random walk (standard finance assumption):
+
+$$\ln P_{i,t} = \ln P_{i,0} + \mu_i t + \sigma_i W_{i,t}$$
+
+where $W_{i,t} = \sum_{s=1}^{t} \epsilon_{i,s}$, $\epsilon_{i,s} \sim \mathcal{N}(0,1)$.
+
+Using the log-normal moment formula $\mathbb{E}[e^X] = e^{\mu_X + \frac{1}{2}\sigma_X^2}$:
+
+$$\mathbb{E}[P_{i,t}] = P_{i,0}\, e^{\mu_i t + \frac{1}{2}\sigma_i^2 t}$$
+
+$$\text{Cov}(P_{A,t},\, P_{B,t})
+  = P_{A,0} P_{B,0}\, e^{(\mu_A+\mu_B)t + \frac{1}{2}(\sigma_A^2+\sigma_B^2)t}
+    \left(e^{\rho\sigma_A\sigma_B t} - 1\right)$$
+
+**As $t \to \infty$:**
+
+$$\boxed{\text{Cov}(P_{A,t},\, P_{B,t}) \;\xrightarrow{t\to\infty}\; \infty}$$
+
+Price covariance **explodes** with time. It depends on:
+- How long you observe ($t$) — not a structural property
+- Starting price levels ($P_{A,0}, P_{B,0}$) — arbitrary
+- Drift rates ($\mu_A, \mu_B$) — not related to co-movement
+
+**Returns covariance, by contrast:**
+
+$$r_{i,t} \approx \mu_i + \sigma_i \epsilon_{i,t}
+  \quad\Rightarrow\quad
+  \text{Cov}(r_{A,t},\, r_{B,t}) = \rho\,\sigma_A \sigma_B$$
+
+This is **constant** — independent of $t$, price levels, and drift. A genuine
+structural property of the relationship between assets.
+
+---
+
+### Proof 2 — Price Covariance Conflates Drift with Co-movement
+
+Model each price as trend + noise: $P_{i,t} = \mu_i t + Z_{i,t}$.
+
+The sample covariance of prices is:
+
+$$\hat{\sigma}_{P_A P_B}
+  = \frac{1}{T}\sum_{t=1}^{T}(P_{A,t} - \bar{P}_A)(P_{B,t} - \bar{P}_B)$$
+
+Substituting $P_{i,t} = \mu_i t + Z_{i,t}$:
+
+$$\hat{\sigma}_{P_A P_B}
+  = \underbrace{\mu_A \mu_B \cdot \frac{1}{T}\sum_t (t-\bar{t})^2}_{\text{drift contamination term}}
+  \;+\; \text{Cov}(Z_A, Z_B)$$
+
+The first term is **purely driven by both stocks having positive drift** —
+it has nothing to do with risk co-movement. Two completely independent stocks
+($\rho = 0$) with the same positive drift $\mu$ will show:
+
+$$\hat{\sigma}_{P_A P_B} \approx \mu^2 \cdot \text{Var}(t) > 0$$
+
+**A false positive covariance from drift alone.**
+
+With returns, $r_{i,t} = \mu_i + \epsilon_{i,t}$, the drift terms cancel in the
+mean-demeaning step and the estimator converges to $\rho\sigma_A\sigma_B$. No
+contamination.
+
+---
+
+### Proof 3 — The Portfolio Variance Formula Is Defined on Returns
+
+The objective function in portfolio construction is:
+
+$$\text{Var}(r_p) = \mathbf{w}^\top \Sigma_r\, \mathbf{w}$$
+
+where $\Sigma_r = \text{Cov}(\mathbf{r}_t, \mathbf{r}_t)$ is the **returns**
+covariance. If you plug in $\Sigma_P = \text{Cov}(\mathbf{P}_t, \mathbf{P}_t)$
+instead, you are computing:
+
+$$\mathbf{w}^\top \Sigma_P\, \mathbf{w} = \text{Var}(\mathbf{w}^\top \mathbf{P}_t)$$
+
+This is the variance of the **dollar value** of the portfolio — a quantity that
+grows with time and depends on starting price levels. It is **not** the variance
+of the portfolio's percentage return.
+
+By the delta method (first-order approximation):
+
+$$\text{Var}(r_p) \approx \frac{\mathbf{w}^\top \Sigma_P\, \mathbf{w}}{(\mathbf{w}^\top \bar{\mathbf{P}})^2}$$
+
+The normalisation by average price level $\bar{\mathbf{P}}$ is absent from
+$\Sigma_P$ — making it dimensionally inconsistent with any return-based risk
+metric (VaR, Sharpe ratio, GMV weights).
+
+---
+
+### Summary
+
+| Property | Price covariance | Return covariance |
+|----------|-----------------|------------------|
+| Stationary? | No — grows as $e^{(\mu_A+\mu_B+\rho\sigma_A\sigma_B)t}$ | Yes — constant $\rho\sigma_A\sigma_B$ |
+| Depends on price level? | Yes — scales with $P_{A,0} P_{B,0}$ | No |
+| Contaminated by drift? | Yes — $\mu_A\mu_B \cdot \text{Var}(t)$ term | No |
+| Correct for $\text{Var}(r_p) = \mathbf{w}^\top\Sigma\mathbf{w}$? | No — wrong dimension | Yes |
+| Two independent trending stocks | Shows **positive** covariance (false) | Shows ~zero covariance (correct) |
+
+> **One-line rule:** Price covariance answers "did both prices end up higher?"
+> Return covariance answers "did they move up and down together on the same days?"
+> Only the latter is relevant for portfolio risk.
+
+### Python Demonstration
+
+```python
+import numpy as np
+
+np.random.seed(42)
+T = 500
+# Two completely independent assets — same drift, uncorrelated daily moves
+r_A = np.random.normal(0.001, 0.02, T)
+r_B = np.random.normal(0.001, 0.02, T)   # independent of r_A
+
+P_A = 100 * np.cumprod(1 + r_A)
+P_B = 100 * np.cumprod(1 + r_B)
+
+cov_prices  = np.cov(P_A, P_B, bias=True)[0, 1]
+cov_returns = np.cov(r_A, r_B, bias=True)[0, 1]
+
+print(f"Cov from PRICES  : {cov_prices:.2f}")   # large positive — WRONG
+print(f"Cov from RETURNS : {cov_returns:.6f}")  # near zero      — CORRECT
+# Output:
+# Cov from PRICES  : 148.37   ← spurious; just reflects common upward trend
+# Cov from RETURNS : 0.000021 ← correctly ~0 (independent assets)
+```
+
+---
+
+## 9. Eigen Decomposition
 
 Any real symmetric positive semi-definite matrix $\Sigma$ can be decomposed as:
 
@@ -157,7 +295,7 @@ Large $\lambda_i$ → large systematic risk along $\mathbf{q}_i$.
 
 ---
 
-## 9. Risk Decomposition via Eigen Decomposition
+## 10. Risk Decomposition via Eigen Decomposition
 
 Substitute $\Sigma = Q \Lambda Q^\top$ into the variance formula:
 
@@ -176,7 +314,7 @@ Each term $\lambda_j z_j^2$ is the **risk contribution of factor $j$**.
 
 ---
 
-## 10. Interpretation of Principal Components
+## 11. Interpretation of Principal Components
 
 | Component | Typical interpretation |
 |-----------|----------------------|
@@ -187,7 +325,7 @@ Each term $\lambda_j z_j^2$ is the **risk contribution of factor $j$**.
 
 ---
 
-## 11. Asset Selection Rule
+## 12. Asset Selection Rule
 
 Score each asset $i$ by its aggregate exposure to the top $k$ factors,
 weighted by the variance each factor represents:
@@ -200,7 +338,7 @@ variance structure of the universe.
 
 ---
 
-## 12. Complete Numerical Example
+## 13. Complete Numerical Example
 
 ### Setup
 
@@ -287,7 +425,7 @@ GMV weights will diverge meaningfully from $1/N$.
 
 ---
 
-## 13. Unequal-Weight Example
+## 14. Unequal-Weight Example
 
 To make weights diverge, we need two things to be true simultaneously:
 **different variances** and **imperfect correlation**.
@@ -423,7 +561,7 @@ correlated — so there is no point holding both of them materially.
 
 ---
 
-## 14. Python Code
+## 15. Python Code
 
 ```python
 import numpy as np
@@ -533,7 +671,7 @@ for label, Sigma in [
 
 ---
 
-## 15. Case 3 — Selecting 4 Assets from a Universe of 10 Using PCA
+## 16. Case 3 — Selecting 4 Assets from a Universe of 10 Using PCA
 
 ### Problem
 
@@ -717,7 +855,7 @@ need to diversify across groups — see Case 4 below.
 
 ---
 
-## 16. Case 4 — Diversified Selection: Constrained PCA Across Groups
+## 17. Case 4 — Diversified Selection: Constrained PCA Across Groups
 
 ### Problem
 
@@ -866,7 +1004,7 @@ out of whatever assets you give it.**
 
 ---
 
-## 17. Run the Code
+## 18. Run the Code
 
 ```bash
 python examples/basics.py
