@@ -314,34 +314,111 @@ $$\Sigma = \begin{pmatrix}
 0.00003 & 0.00072 & 0.0036
 \end{pmatrix}$$
 
-### GMV Weights
+### Step-by-Step Weight Calculation
 
-$$\mathbf{w}^{\ast} \approx \begin{pmatrix} 0.88 \\ 0.11 \\ 0.01 \end{pmatrix}$$
+The GMV formula is:
 
-**Asset A (lowest variance) dominates at 88%.** Asset C (6× higher vol than A)
-gets only 1%.
+$$\mathbf{w}^{\ast} = \frac{\Sigma^{-1} \mathbf{1}}{\mathbf{1}^\top \Sigma^{-1} \mathbf{1}}$$
 
-### Comparison: Equal vs Near-Equal vs Unequal
+So the weight of each asset is proportional to the **row sum of the precision
+matrix** $\Sigma^{-1}$.
 
-| Scenario | Asset A | Asset B | Asset C | Portfolio Vol |
-|----------|---------|---------|---------|--------------|
-| Equal weights $1/N$ | 33% | 33% | 33% | ~2.1% |
-| Example 12 (high corr) | 29% | 38% | 33% | ~1.7% |
-| **This example (low corr, diff var)** | **88%** | **11%** | **1%** | **~1.0%** |
+---
 
-The GMV portfolio with diverse assets achieves **half the volatility** of an
-equal-weight portfolio by heavily tilting toward the least volatile, least
-correlated asset.
+**Step 1 — Precision matrix $\Sigma^{-1}$**
 
-### Intuition
+$$\Sigma^{-1} = \begin{pmatrix}
+ 10428 & -745 &   62 \\
+  -745 &  1376 & -269 \\
+    62 & -269 &  331
+\end{pmatrix}$$
 
-The precision matrix $\Sigma^{-1}$ amplifies differences in variance:
+*Note: positive diagonal entries, negative off-diagonal entries — standard for
+a precision matrix of positively correlated assets.*
 
-$$(\Sigma^{-1})_{ii} \approx \frac{1}{\sigma_i^2 (1 - R_i^2)}$$
+---
 
-where $R_i^2$ is the $R^2$ of regressing asset $i$ on all other assets.
-Asset A has tiny $\sigma_A^2 = 0.0001$ and low $R^2$ (weakly correlated) →
-its precision entry is huge → it receives the bulk of the weight.
+**Step 2 — Row sums = unnormalised weights**
+
+$$\tilde{w}_i = \sum_j (\Sigma^{-1})_{ij}$$
+
+| Asset | Diagonal | Off-diag sum | Row sum $\tilde{w}_i$ |
+|-------|----------|--------------|-----------------------|
+| A | +10428 | $-745 + 62 = -683$ | **9745** |
+| B | +1376 | $-745 - 269 = -1014$ | **362** |
+| C | +331 | $62 - 269 = -207$ | **124** |
+| **Total** | | | **10232** |
+
+---
+
+**Step 3 — Normalise**
+
+$$w_i = \frac{\tilde{w}_i}{\sum_j \tilde{w}_j}$$
+
+| Asset | $\tilde{w}_i$ | Weight |
+|-------|---------------|--------|
+| A | 9745 | $9745 / 10232 = $ **95.2%** |
+| B | 362 | $362 / 10232 = $ **3.5%** |
+| C | 124 | $124 / 10232 = $ **1.2%** |
+
+---
+
+**Why does Asset A dominate so heavily?**
+
+Two compounding effects:
+
+**Effect 1 — Diagonal (variance effect)**
+
+The diagonal of $\Sigma^{-1}$ is approximately $1/\sigma_i^2$ (adjusted for
+correlations). Since variances differ by 36×:
+
+| Asset | $\sigma^2$ | $1/\sigma^2$ (naive) | Actual $(\Sigma^{-1})_{ii}$ |
+|-------|------------|---------------------|--------------------------|
+| A | 0.0001 | 10,000 | 10,428 |
+| B | 0.0009 | 1,111 | 1,376 |
+| C | 0.0036 | 278 | 331 |
+
+Asset A's diagonal alone is **31× larger** than Asset C's.
+
+**Effect 2 — Off-diagonal (correlation penalty)**
+
+When asset $i$ is correlated with others, the negative off-diagonal entries
+*reduce* its row sum. Asset B pays the heaviest penalty:
+
+- B is correlated with both A ($\rho=0.20$) and C ($\rho=0.40$)
+- Its off-diagonal drain: $-745 - 269 = -1014$
+- This wipes out 74% of its diagonal (1376 → 362)
+
+Asset A is barely correlated with C ($\rho=0.05$), so its drain is only $-683$
+— just 6.5% of its diagonal (10428 → 9745).
+
+**Net result — row sum ratios:**
+
+$$\tilde{w}_A : \tilde{w}_B : \tilde{w}_C = 9745 : 362 : 124 \approx 78 : 3 : 1$$
+
+After normalisation → **95.2% : 3.5% : 1.2%**
+
+---
+
+**Why not just use $1/\sigma^2$ (inverse-variance) weights?**
+
+Inverse-variance weighting ignores correlations entirely:
+
+$$w_i^{\text{IVW}} = \frac{1/\sigma_i^2}{\sum_j 1/\sigma_j^2}
+  \approx \begin{pmatrix} 87.8\% \\ 9.8\% \\ 2.4\% \end{pmatrix}$$
+
+This assigns Asset C 2.4% instead of 1.2% — twice as much — because it doesn't
+account for the fact that B and C are correlated ($\rho=0.40$), making C
+redundant to B. The full GMV correctly penalises C further.
+
+| Method | Asset A | Asset B | Asset C | Portfolio Vol |
+|--------|---------|---------|---------|--------------|
+| Equal weight ($1/N$) | 33% | 33% | 33% | 2.63% |
+| Inverse-variance ($1/\sigma^2$) | 87.8% | 9.8% | 2.4% | 1.01% |
+| **GMV ($\Sigma^{-1}$)** | **95.2%** | **3.5%** | **1.2%** | **0.99%** |
+
+GMV squeezes out the last bit of variance by recognising that B and C are
+correlated — so there is no point holding both of them materially.
 
 ---
 
