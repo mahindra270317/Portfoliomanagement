@@ -57,7 +57,7 @@ $$\mathbf{1}^\top \frac{\lambda}{2} \Sigma^{-1} \mathbf{1} = 1
 
 **Substitute back:**
 
-$$\boxed{\mathbf{w}^* = \frac{\Sigma^{-1} \mathbf{1}}{\mathbf{1}^\top \Sigma^{-1} \mathbf{1}}}$$
+$$\boxed{\mathbf{w}^{\ast} = \frac{\Sigma^{-1} \mathbf{1}}{\mathbf{1}^\top \Sigma^{-1} \mathbf{1}}}$$
 
 ---
 
@@ -96,12 +96,12 @@ $$\Sigma^{-1} \mathbf{1} = \begin{pmatrix} 28.57 - 14.29 \\ -14.29 + 57.14 \end{
 
 $$\mathbf{1}^\top \Sigma^{-1} \mathbf{1} = 14.29 + 42.86 = 57.14$$
 
-$$\mathbf{w}^* = \frac{1}{57.14} \begin{pmatrix} 14.29 \\ 42.86 \end{pmatrix}
+$$\mathbf{w}^{\ast} = \frac{1}{57.14} \begin{pmatrix} 14.29 \\ 42.86 \end{pmatrix}
   \approx \begin{pmatrix} 0.25 \\ 0.75 \end{pmatrix}$$
 
 ### Portfolio variance
 
-$$\mathbf{w}^{*\top} \Sigma \mathbf{w}^* = 0.0175$$
+$$\mathbf{w}^{\ast\top} \Sigma \mathbf{w}^{\ast} = 0.0175$$
 
 > Asset B (lower variance, 0.02) receives the larger weight. The positive
 > covariance (0.01) shifts weight further toward the lower-variance asset.
@@ -112,10 +112,10 @@ $$\mathbf{w}^{*\top} \Sigma \mathbf{w}^* = 0.0175$$
 
 Substitute $\Sigma = Q \Lambda Q^\top$:
 
-$$\mathbf{w}^{*\top} \Sigma \mathbf{w}^* = \mathbf{w}^{*\top} Q \Lambda Q^\top \mathbf{w}^*
+$$\mathbf{w}^{\ast\top} \Sigma \mathbf{w}^{\ast} = \mathbf{w}^{\ast\top} Q \Lambda Q^\top \mathbf{w}^{\ast}
   = \sum_{j=1}^{N} \lambda_j z_j^2$$
 
-where $\mathbf{z} = Q^\top \mathbf{w}^*$ are the **factor exposures** of the GMV
+where $\mathbf{z} = Q^\top \mathbf{w}^{\ast}$ are the **factor exposures** of the GMV
 portfolio.
 
 The GMV portfolio automatically minimises this sum — it de-weights the
