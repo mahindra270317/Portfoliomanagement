@@ -911,13 +911,87 @@ This low cross-group covariance is what makes XOM and UNH valuable diversifiers.
 
 ### Step 3 — Precision Matrix Row Sums → Weights
 
-| Asset | $\sigma$ | Row sum $\tilde{w}_i$ | Drain % | Weight |
-|-------|----------|-----------------------|---------|--------|
-| TSLA | 3.79% | 172.5 | −83.7% | **2.6%** |
-| NVDA | 3.57% | 254.8 | −78.7% | **3.9%** |
-| XOM | 1.92% | 2,015.9 | −29.1% | **30.8%** |
-| UNH | 1.44% | 4,099.2 | −21.4% | **62.7%** |
-| **Total** | | **6,542** | | **100%** |
+The GMV formula is:
+
+$$\mathbf{w}^{\ast} = \frac{\Sigma^{-1}\,\mathbf{1}}{\mathbf{1}^\top \Sigma^{-1}\,\mathbf{1}}$$
+
+So the weight of each asset = its **precision matrix row sum**, normalised.
+
+**3a — Invert $\Sigma$ to get the precision matrix $\Sigma^{-1}$:**
+
+$$\Sigma^{-1} \approx \begin{pmatrix}
+ 1228 & -898 & -24 & -134 \\
+ -898 & 1391 & -26 & -212 \\
+  -24 &  -26 & 2842 & -777 \\
+ -134 & -212 & -777 & 5222
+\end{pmatrix}$$
+
+*(rows/cols: TSLA, NVDA, XOM, UNH)*
+
+Off-diagonal entries are **negative** because positively correlated assets
+cancel each other in the inverse — knowing TSLA is high tells you NVDA is
+also high, reducing the marginal information value of holding both.
+
+**3b — Sum each row → unnormalised weight $\tilde{w}_i$:**
+
+$$\tilde{w}_i = \sum_j (\Sigma^{-1})_{ij}$$
+
+| Asset | Diagonal | Off-diagonal sum | Row sum $\tilde{w}_i$ |
+|-------|----------|-----------------|----------------------|
+| TSLA | +1,228 | $-898-24-134 = -1{,}056$ | **172.5** |
+| NVDA | +1,391 | $-898-26-212 = -1{,}136$ | **254.8** |
+| XOM | +2,842 | $-24-26-777 = -827$ | **2,015.9** |
+| UNH | +5,222 | $-134-212-777 = -1{,}123$ | **4,099.2** |
+| **Total** | | | **6,542** |
+
+**Drain %** = how much the off-diagonal entries erode the diagonal:
+
+$$\text{Drain\%}_i = \frac{\tilde{w}_i - (\Sigma^{-1})_{ii}}{(\Sigma^{-1})_{ii}} \times 100$$
+
+| Asset | Diagonal | Row sum | Drain % |
+|-------|----------|---------|---------|
+| TSLA | 1,228 | 172.5 | **−83.7%** ← TSLA-NVDA correlation wipes out most of the diagonal |
+| NVDA | 1,391 | 254.8 | **−78.7%** |
+| XOM | 2,842 | 2,015.9 | **−29.1%** ← weak cross-group correlation, small drain |
+| UNH | 5,222 | 4,099.2 | **−21.4%** ← near-independent, barely drained |
+
+**3c — Normalise → final weight:**
+
+$$w_i = \frac{\tilde{w}_i}{\sum_j \tilde{w}_j}$$
+
+| Asset | $\tilde{w}_i$ | ÷ 6,542 | Weight |
+|-------|--------------|---------|--------|
+| TSLA | 172.5 | | **2.6%** |
+| NVDA | 254.8 | | **3.9%** |
+| XOM | 2,015.9 | | **30.8%** |
+| UNH | 4,099.2 | | **62.7%** |
+| **Total** | **6,542** | | **100%** |
+
+**Verify in Python:**
+
+```python
+import numpy as np
+
+Sigma = np.array([
+    [0.001437, 0.000782, 0.000071, 0.000100],
+    [0.000782, 0.001271, 0.000078, 0.000094],
+    [0.000071, 0.000078, 0.000369, 0.000055],
+    [0.000100, 0.000094, 0.000055, 0.000207],
+])
+names = ["TSLA", "NVDA", "XOM", "UNH"]
+
+inv_S    = np.linalg.inv(Sigma)       # Step 3a: precision matrix
+row_sums = inv_S.sum(axis=1)          # Step 3b: row sums
+weights  = row_sums / row_sums.sum()  # Step 3c: normalise
+
+print(f"{'Asset':<6} {'Diag':>8} {'OffDiag':>10} {'RowSum':>9} {'Drain%':>8} {'Weight':>8}")
+for i, name in enumerate(names):
+    diag    = inv_S[i, i]
+    offdiag = row_sums[i] - diag
+    drain   = offdiag / diag * 100
+    print(f"{name:<6} {diag:>8.1f} {offdiag:>10.1f} {row_sums[i]:>9.1f}"
+          f" {drain:>7.1f}% {weights[i]:>7.1%}")
+```
 
 ---
 
