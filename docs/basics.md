@@ -404,8 +404,9 @@ After normalisation → **95.2% : 3.5% : 1.2%**
 
 Inverse-variance weighting ignores correlations entirely:
 
-$$w_i^{\text{IVW}} = \frac{1/\sigma_i^2}{\sum_j 1/\sigma_j^2}
-  \approx \begin{pmatrix} 87.8\% \\ 9.8\% \\ 2.4\% \end{pmatrix}$$
+$$w_i^{\text{IVW}} = \frac{1/\sigma_i^2}{\sum_j 1/\sigma_j^2}$$
+
+$$\mathbf{w}^{\text{IVW}} \approx [\ 87.8\%,\ 9.8\%,\ 2.4\%\ ]$$
 
 This assigns Asset C 2.4% instead of 1.2% — twice as much — because it doesn't
 account for the fact that B and C are correlated ($\rho=0.40$), making C
@@ -532,67 +533,178 @@ for label, Sigma in [
 
 ---
 
-## 15. Case 3 — Asset Selection from 10 Assets using PCA (select top 4)
+## 15. Case 3 — Selecting 4 Assets from a Universe of 10 Using PCA
 
 ### Problem
 
-We have **10 assets** but want to build a portfolio from only **4**. How do we
+We have **10 assets** but want a focused portfolio of only **4**. How do we
 decide which 4 to keep?
 
-Naively picking the 4 lowest-variance assets ignores correlations. Instead we
-use PCA scores to select the 4 assets that are most representative of the
-dominant systematic risk factors — and then run GMV on just those 4.
-
-### Step-by-Step
-
-**Step 1 — Build the universe covariance matrix ($10 \times 10$)**
-
-We use a realistic structure: 3 groups (growth, value, defensive) with
-within-group correlation ~0.7 and cross-group correlation ~0.2.
-
-| Asset | Group | Daily Vol |
-|-------|-------|-----------|
-| A1–A4 | Growth | 3%–5% |
-| B1–B3 | Value | 1.5%–2.5% |
-| C1–C3 | Defensive | 0.8%–1.5% |
-
-**Step 2 — Eigendecompose $\Sigma$**
-
-$$\Sigma = Q \Lambda Q^\top, \quad \lambda_1 \geq \lambda_2 \geq \cdots \geq \lambda_{10}$$
-
-**Step 3 — Select $k$ factors** (e.g. 95% variance explained → typically 3–4 PCs)
-
-**Step 4 — Score every asset**
-
-$$\text{score}_i = \sum_{j=1}^{k} \lambda_j \, q_{ij}^2$$
-
-High score = asset is strongly exposed to the dominant risk factors.
-
-**Step 5 — Keep top 4 by score, drop the rest**
-
-**Step 6 — Extract the $4 \times 4$ sub-covariance and compute GMV weights**
-
-### Why this works
-
-The PCA score measures how much of an asset's variance is explained by the
-top-$k$ systematic factors. Selecting high-scoring assets ensures the portfolio
-captures the main market dynamics. Low-scoring assets are largely idiosyncratic
-— including them adds noise without adding meaningful factor exposure.
-
-### Key output to look for
-
-| Check | What it tells you |
-|-------|------------------|
-| Which group dominates the top 4? | Which sector drives most market risk |
-| How unequal are the 4 weights? | Whether selected assets are still similar or diverse |
-| Portfolio vol vs equal-weight (all 10) | Benefit of selection + optimisation |
-
-See `examples/basics.py` — Case 3 for the full runnable implementation.
+Naively picking the 4 lowest-variance assets ignores correlations and
+systematic risk structure. Instead we use **PCA scores** to select the 4 assets
+most representative of the dominant risk factors in the universe.
 
 ---
 
-## 16. Run All Three Cases
+### Setup — Universe of 10 Assets
+
+Three groups with different volatility profiles:
+
+| Asset | Group | Daily Vol | $\sigma^2$ |
+|-------|-------|-----------|-----------|
+| Growth-1 | Growth | 3.0% | 0.000900 |
+| Growth-2 | Growth | 3.5% | 0.001225 |
+| Growth-3 | Growth | 2.8% | 0.000784 |
+| Growth-4 | Growth | 4.0% | 0.001600 |
+| Value-1 | Value | 1.8% | 0.000324 |
+| Value-2 | Value | 2.2% | 0.000484 |
+| Value-3 | Value | 1.5% | 0.000225 |
+| Def-1 | Defensive | 0.8% | 0.000064 |
+| Def-2 | Defensive | 1.0% | 0.000100 |
+| Def-3 | Defensive | 1.2% | 0.000144 |
+
+**Correlation structure:**
+- Within-group: $\rho = 0.70$ (assets in the same sector move together)
+- Cross-group: $\rho = 0.15$ (weak cross-sector linkage)
+
+---
+
+### Step 1 — Eigendecompose the $10 \times 10$ Covariance Matrix
+
+$$\Sigma = Q \Lambda Q^\top, \quad \lambda_1 \geq \lambda_2 \geq \cdots \geq \lambda_{10} \geq 0$$
+
+**Explained variance per principal component:**
+
+| PC | Eigenvalue $\lambda_j$ | Explained | Cumulative |
+|----|----------------------|-----------|-----------|
+| PC1 | 0.000954 | 61.1% | 61.1% |
+| PC2 | 0.000215 | 13.8% | 74.9% |
+| PC3 | 0.000114 | 7.3% | 82.2% |
+| PC4 | 0.000082 | 5.3% | 87.5% |
+| PC5 | 0.000065 | 4.2% | 91.7% |
+| PC6 | 0.000063 | 4.0% | **95.7%** ← threshold |
+| … | … | … | … |
+
+**k = 6 principal components** are needed to explain ≥ 95% of variance.
+
+*Why 6 and not 3?* Because within each of the 3 groups there are sub-patterns
+(e.g. Growth-4 is more volatile than Growth-3) that require extra PCs to capture.
+
+---
+
+### Step 2 — Score Every Asset
+
+For each asset $i$, compute:
+
+$$\text{score}_i = \sum_{j=1}^{k=6} \lambda_j \, q_{ij}^2$$
+
+This measures how much of asset $i$'s total variance is explained by the top-6
+systematic factors. A high score means the asset is a major driver of market
+risk — it is highly "systematic."
+
+**Scores (bar = proportion of max score):**
+
+| Asset | Score | Relative bar |
+|-------|-------|-------------|
+| Growth-4 | 0.001600 | ████████████████████ ← highest |
+| Growth-2 | 0.001225 | ███████████████ |
+| Growth-1 | 0.000900 | ████████████ |
+| Growth-3 | 0.000784 | ██████████ |
+| Value-2 | 0.000428 | █████ |
+| Value-1 | 0.000250 | ███ |
+| Value-3 | 0.000160 | ██ |
+| Def-3 | 0.000127 | █ |
+| Def-2 | 0.000078 | █ |
+| Def-1 | 0.000045 | |
+
+**Why does Growth dominate?**  
+PCA score $\approx \sigma_i^2$ when within-group correlations are uniform.
+Growth assets have the highest variances → highest scores. The score is not
+about "safety" — it ranks assets by **systematic risk contribution**.
+
+---
+
+### Step 3 — Select Top 4 by Score
+
+$$\text{Selected} = \{\text{Growth-4},\ \text{Growth-2},\ \text{Growth-1},\ \text{Growth-3}\}$$
+
+All four come from the Growth group. Their $4 \times 4$ sub-covariance:
+
+$$\Sigma_{\text{sel}} = \begin{pmatrix}
+0.00160 & 0.00098 & 0.00084 & 0.00112 \\
+0.00098 & 0.00122 & 0.00073 & 0.00098 \\
+0.00084 & 0.00073 & 0.00090 & 0.00084 \\
+0.00112 & 0.00098 & 0.00084 & 0.00160
+\end{pmatrix}$$
+
+*(rows/columns: Growth-4, Growth-2, Growth-1, Growth-3)*
+
+Within-group correlation is 0.70 — these 4 assets are highly correlated with
+each other, so GMV will again push toward unequal weights.
+
+---
+
+### Step 4 — GMV Weights on the 4 Selected Assets
+
+$$\mathbf{w}^{\ast} \approx [\ -15.5\%,\ +5.8\%,\ +43.5\%,\ +66.2\%\ ]$$
+
+*(Growth-4, Growth-2, Growth-1, Growth-3)*
+
+**Why is Growth-4 negative?**  
+Growth-4 has the **highest variance** (4.0% daily vol). Within a group of
+highly correlated assets, GMV shorts the most volatile member and overweights
+the least volatile (Growth-3 at 2.8%, Growth-1 at 3.0%) because shorting
+the high-vol name reduces overall portfolio variance.
+
+**Factor risk of the selected portfolio:**
+
+| Factor | % of Portfolio Variance |
+|--------|------------------------|
+| PC1 (market) | 76.4% |
+| PC3 | 12.9% |
+| PC2 | 7.0% |
+| PC4 | 3.7% |
+
+76% of risk comes from PC1 — the portfolio is still market-dominated.
+
+---
+
+### Step 5 — Compare Across Methods
+
+| Method | Portfolio Vol | Notes |
+|--------|--------------|-------|
+| Equal weight (all 10 assets) | 1.44% | Defensive assets dilute vol |
+| GMV on PCA-selected 4 (Growth) | 2.63% | Higher vol — all systematic assets |
+| GMV on lowest-vol 4 (Defensives) | ~0.85% | Lowest vol, but minimal factor exposure |
+
+**Key insight:** PCA selection picks the *most systematic* assets — those that
+best represent the dominant market risk factors. This is useful for factor
+modelling and stat arb. If the goal is purely minimising portfolio volatility,
+you would instead select the 4 lowest-variance assets (the Defensive group).
+
+| Goal | Best selection method |
+|------|----------------------|
+| Capture market factor exposure | PCA score ranking |
+| Minimise portfolio variance | Select lowest-vol assets |
+| Balance both | Hybrid: PCA within each vol tier |
+
+---
+
+### Summary — All Three Cases
+
+| Case | Assets | Method | GMV Vol | Equal-wt Vol |
+|------|--------|--------|---------|-------------|
+| A: Equal vol, high corr | 3 | Direct GMV | 1.93% | 1.93% |
+| B: Diff vol, low corr | 3 | Direct GMV | **0.99%** | 2.63% |
+| C: PCA top-4 of 10 | 4 of 10 | PCA select → GMV | 2.63% | 1.44% (all 10) |
+
+---
+
+## 16. Run the Code
 
 ```bash
 python examples/basics.py
 ```
+
+All three cases are implemented in [`examples/basics.py`](../examples/basics.py)
+with step-by-step printed output matching this document.
