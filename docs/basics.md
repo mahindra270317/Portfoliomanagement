@@ -287,47 +287,168 @@ GMV weights will diverge meaningfully from $1/N$.
 
 ---
 
-## 13. Python Code
+## 13. Unequal-Weight Example
+
+To make weights diverge, we need two things to be true simultaneously:
+**different variances** and **imperfect correlation**.
+
+### Setup
+
+| Asset | Daily Vol ($\sigma$) | Variance ($\sigma^2$) | Interpretation |
+|-------|---------------------|----------------------|---------------|
+| A | 1% | 0.0001 | Low-vol bond-like asset |
+| B | 3% | 0.0009 | Mid-vol equity |
+| C | 6% | 0.0036 | High-vol growth stock |
+
+Correlation matrix (realistic, not near-1):
+
+$$\rho = \begin{pmatrix} 1.00 & 0.20 & 0.05 \\ 0.20 & 1.00 & 0.40 \\ 0.05 & 0.40 & 1.00 \end{pmatrix}$$
+
+### Covariance Matrix
+
+Convert using $\Sigma_{ij} = \rho_{ij} \sigma_i \sigma_j$:
+
+$$\Sigma = \begin{pmatrix}
+0.0001 & 0.00006 & 0.00003 \\
+0.00006 & 0.0009 & 0.00072 \\
+0.00003 & 0.00072 & 0.0036
+\end{pmatrix}$$
+
+### GMV Weights
+
+$$\mathbf{w}^{\ast} \approx \begin{pmatrix} 0.88 \\ 0.11 \\ 0.01 \end{pmatrix}$$
+
+**Asset A (lowest variance) dominates at 88%.** Asset C (6× higher vol than A)
+gets only 1%.
+
+### Comparison: Equal vs Near-Equal vs Unequal
+
+| Scenario | Asset A | Asset B | Asset C | Portfolio Vol |
+|----------|---------|---------|---------|--------------|
+| Equal weights $1/N$ | 33% | 33% | 33% | ~2.1% |
+| Example 12 (high corr) | 29% | 38% | 33% | ~1.7% |
+| **This example (low corr, diff var)** | **88%** | **11%** | **1%** | **~1.0%** |
+
+The GMV portfolio with diverse assets achieves **half the volatility** of an
+equal-weight portfolio by heavily tilting toward the least volatile, least
+correlated asset.
+
+### Intuition
+
+The precision matrix $\Sigma^{-1}$ amplifies differences in variance:
+
+$$(\Sigma^{-1})_{ii} \approx \frac{1}{\sigma_i^2 (1 - R_i^2)}$$
+
+where $R_i^2$ is the $R^2$ of regressing asset $i$ on all other assets.
+Asset A has tiny $\sigma_A^2 = 0.0001$ and low $R^2$ (weakly correlated) →
+its precision entry is huge → it receives the bulk of the weight.
+
+---
+
+## 14. Python Code
 
 ```python
 import numpy as np
 
-# Returns (T x N)
-R = np.array([
+# ---------------------------------------------------------------------------
+# Helper
+# ---------------------------------------------------------------------------
+
+def gmv(Sigma):
+    """Global minimum variance weights."""
+    ones  = np.ones(Sigma.shape[0])
+    inv_S = np.linalg.inv(Sigma)
+    w     = inv_S @ ones
+    return w / (ones @ inv_S @ ones)
+
+
+def summarise(label, R_or_Sigma, from_returns=True):
+    """Print weights, vol, and factor risk for a scenario."""
+    print(f"\n{'='*55}")
+    print(f" {label}")
+    print(f"{'='*55}")
+
+    if from_returns:
+        mu    = R_or_Sigma.mean(axis=0)
+        X     = R_or_Sigma - mu
+        T, N  = X.shape
+        Sigma = X.T @ X / (T - 1)
+    else:
+        Sigma = R_or_Sigma
+        N     = Sigma.shape[0]
+
+    w         = gmv(Sigma)
+    port_var  = float(w.T @ Sigma @ w)
+
+    print(f"Weights      : {w.round(3)}")
+    print(f"Equal weights: {np.ones(N)/N}")
+    print(f"Portfolio vol: {port_var**0.5:.4%}")
+    print(f"Equal-wt vol : {(np.ones(N)/N @ Sigma @ np.ones(N)/N)**0.5:.4%}")
+
+    # Factor decomposition
+    eigvals, eigvecs = np.linalg.eigh(Sigma)
+    idx     = np.argsort(eigvals)[::-1]
+    eigvals = eigvals[idx]
+    eigvecs = eigvecs[:, idx]
+    z       = eigvecs.T @ w
+
+    print("Factor risk  :")
+    for j, (lam, zj) in enumerate(zip(eigvals, z)):
+        pct = lam * zj**2 / port_var
+        print(f"  PC{j+1}: {pct:.1%}")
+
+
+# ---------------------------------------------------------------------------
+# Example A — high correlation, similar variance  →  near-equal weights
+# ---------------------------------------------------------------------------
+R_equal = np.array([
     [1.0,  0.8,  1.2],
     [-0.5, -0.4, -0.6],
     [0.8,  1.0,  0.9],
     [-1.0, -0.9, -1.1],
     [0.3,  0.2,  0.4],
 ])
+summarise("Example A: high correlation, similar variance", R_equal)
 
-# Mean & centering
-mu = R.mean(axis=0)
-X  = R - mu
 
-# Sample covariance
-T, N = X.shape
-Sigma = X.T @ X / (T - 1)
+# ---------------------------------------------------------------------------
+# Example B — low correlation, very different variance  →  unequal weights
+# ---------------------------------------------------------------------------
+# Asset vols: A=1%, B=3%, C=6%
+vols = np.array([0.01, 0.03, 0.06])
 
-# Eigen decomposition
-eigvals, eigvecs = np.linalg.eigh(Sigma)
-idx     = np.argsort(eigvals)[::-1]
-eigvals = eigvals[idx]
-eigvecs = eigvecs[:, idx]
+# Correlation matrix
+rho = np.array([
+    [1.00, 0.20, 0.05],
+    [0.20, 1.00, 0.40],
+    [0.05, 0.40, 1.00],
+])
 
-print("Eigenvalues:", eigvals)
-print("Explained variance:", eigvals / eigvals.sum())
+# Convert to covariance: Sigma_ij = rho_ij * vol_i * vol_j
+Sigma_unequal = rho * np.outer(vols, vols)
+summarise("Example B: low correlation, different variance", Sigma_unequal,
+          from_returns=False)
 
-# GMV weights
-ones  = np.ones(N)
-inv_S = np.linalg.inv(Sigma)
-w     = inv_S @ ones / (ones @ inv_S @ ones)
-print("GMV weights:", w)
-print("Portfolio variance:", w.T @ Sigma @ w)
 
-# Risk decomposition
-z            = eigvecs.T @ w
-risk_contrib = eigvals * z**2
-print("Factor exposures:", z)
-print("Risk contributions:", risk_contrib)
+# ---------------------------------------------------------------------------
+# Side-by-side summary
+# ---------------------------------------------------------------------------
+print("\n" + "="*55)
+print(" Side-by-side: Equal-weight vol vs GMV vol")
+print("="*55)
+
+for label, Sigma in [
+    ("High corr / similar var (Example A)",
+     np.cov(R_equal.T)),
+    ("Low corr  / diff var    (Example B)",
+     Sigma_unequal),
+]:
+    w_gmv = gmv(Sigma)
+    w_eq  = np.ones(len(w_gmv)) / len(w_gmv)
+    print(f"\n{label}")
+    print(f"  GMV weights    : {w_gmv.round(3)}")
+    print(f"  GMV vol        : {(w_gmv @ Sigma @ w_gmv)**0.5:.4%}")
+    print(f"  Equal-wt vol   : {(w_eq  @ Sigma @ w_eq )**0.5:.4%}")
+    print(f"  Vol improvement: "
+          f"{((w_eq@Sigma@w_eq)**0.5 - (w_gmv@Sigma@w_gmv)**0.5):.4%}")
 ```
