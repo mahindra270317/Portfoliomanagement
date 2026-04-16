@@ -45,6 +45,11 @@ Portfoliomanagement/
 │   └── risk.md              ← risk decomposition framework
 │
 ├── research/                ← quantitative strategies (each self-contained)
+│   ├── allocation_models/
+│   │   └── mpt_efficient_frontier/
+│   │       ├── src/         ← MPT efficient frontier + limitation checks
+│   │       ├── input/       ← cached live price data (gitignored-ready)
+│   │       └── output/      ← generated reports/weights/frontier data
 │   └── factor_models/
 │       └── pca_portfolio_construction/
 │           ├── src/         ← runnable Python pipeline
@@ -65,11 +70,14 @@ Portfoliomanagement/
 # Install dependencies
 pip install -r requirements.txt
 
+# Run the MPT efficient frontier pipeline
+python research/allocation_models/mpt_efficient_frontier/src/mpt_efficient_frontier.py
+
 # Run the PCA portfolio pipeline
 python research/factor_models/pca_portfolio_construction/src/pca_portfolio.py
 ```
 
-Results are written to `research/factor_models/pca_portfolio_construction/output/`.
+Results are written to the corresponding `research/**/output/` folders.
 
 ---
 
@@ -86,7 +94,8 @@ Results are written to `research/factor_models/pca_portfolio_construction/output
 
 | # | Strategy | Path | Status |
 |---|----------|------|--------|
-| 1 | PCA Factor Model + GMV Portfolio | [`research/factor_models/pca_portfolio_construction`](research/factor_models/pca_portfolio_construction/README.md) | Active |
+| 1 | MPT Efficient Frontier + Limitation Diagnostics | [`research/allocation_models/mpt_efficient_frontier`](research/allocation_models/mpt_efficient_frontier/README.md) | Active |
+| 2 | PCA Factor Model + GMV Portfolio | [`research/factor_models/pca_portfolio_construction`](research/factor_models/pca_portfolio_construction/README.md) | Active |
 
 ---
 
